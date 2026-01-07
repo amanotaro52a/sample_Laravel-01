@@ -1,42 +1,34 @@
-version: '3'
 services:
-  l10dev-nginx:
-    container_name: "l10dev-nginx"
-    build:
-      context: ./docker/nginx
-    depends_on:
-      - l10dev-app
+  app:
+    container_name: app
+    build: ./docker/php
+    volumes:
+      - .:/var/www
+
+  nginx:
+    image: nginx
+    container_name: nginx
     ports:
-      - 80:80
+      - 8000:80
     volumes:
-      - ./:/src
-
-  l10dev-app:
-    container_name: "l10dev-app"
-    build:
-      context: ./docker/php
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    working_dir: /var/www
     depends_on:
-      - l10dev-mysql
-    volumes:
-      - ./:/src
-      - /src/node_modules
-      - /src/vendor
-      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
-
-  l10dev-mysql:
-    image: mysql:8.0.33
-    command: --max_allowed_packet=32505856
-    container_name: "l10dev-mysql"
-    volumes:
-      - ./docker/mysql:/var/lib/mysql
+      - app
+  db:
+    image: mysql:8.0
+    container_name: db
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=l10dev
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: database
+      MYSQL_USER: db-user
+      MYSQL_PASSWORD: db-pass
+      TZ: 'Asia/Tokyo'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./docker/db/data:/var/lib/mysql
+      - ./docker/db/my.cnf:/etc/mysql/conf.d/my.cnf  
+      - ./docker/db/sql:/docker-entrypoint-initdb.d
     ports:
       - 3306:3306
-
-  l10dev-redis:
-    image: redis:alpine
-    container_name: "l10dev-redis"
-    ports:
-      - 16379:6379
